@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Simulasi interaktif algoritma pencarian BFS, DFS, dan A* pada peta dungeon RPG. Visualisasi langkah demi langkah di graf berarah berbobot.">
+  <title>Simulasi Pencarian Dungeon RPG (BFS, DFS, A*)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- ======================================================
+         HEADER
+    ======================================================= -->
+    <header class="header">
+      <div class="title-group">
+        <h1>
+          <span class="icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </span>
+          Simulasi Pencarian Dungeon RPG
+        </h1>
+        <p>
+          Jelajahi peta labirin bawah tanah dari <strong>Gerbang Masuk</strong>
+          menuju <strong>Ruang Boss</strong> menggunakan BFS, DFS, dan A*
+        </p>
+      </div>
+
+      <!-- Algorithm Tabs -->
+      <div class="algo-tabs" id="tabs" role="tablist">
+        <button class="algo-tab active-bfs" id="tab-bfs" onclick="setAlgo('bfs')" role="tab" aria-selected="true"
+          title="Breadth-First Search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="5" r="3" />
+            <circle cx="5" cy="19" r="3" />
+            <circle cx="19" cy="19" r="3" />
+            <path d="M12 8v4m-5 4 3-2m9 0-3-2" />
+          </svg>
+          BFS (Breadth-First)
+        </button>
+
+        <button class="algo-tab" id="tab-dfs" onclick="setAlgo('dfs')" role="tab" aria-selected="false"
+          title="Depth-First Search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="4" r="3" />
+            <circle cx="12" cy="12" r="3" />
+            <circle cx="12" cy="20" r="3" />
+            <path d="M12 7v2m0 6v2" />
+          </svg>
+          DFS (Depth-First)
+        </button>
+
+        <button class="algo-tab" id="tab-astar" onclick="setAlgo('astar')" role="tab" aria-selected="false"
+          title="A* Search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon
+              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          A* Search (Optimal)
+        </button>
+      </div>
+    </header>
+
+    <!-- ======================================================
+         MAIN GRID
+    ======================================================= -->
+    <main class="main-grid">
+
+      <!-- ---- Left: Map & Controls ---- -->
+      <div class="map-card">
+
+        <!-- SVG Dungeon Map -->
+        <div class="map-container">
+          <svg viewBox="0 0 740 400" id="dungeon-svg" role="img" aria-label="Peta Dungeon Graf Interaktif">
+            <g id="edges-layer"></g>
+            <g id="weights-layer"></g>
+            <g id="nodes-layer"></g>
+          </svg>
+        </div>
+
+        <!-- Step Progress Bar -->
+        <div class="progress-wrap">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-panel">
+          <div class="btn-group">
+            <button class="ctrl-btn" id="btn-reset" title="Ulangi dari Awal" onclick="resetSim()">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            </button>
+
+            <button class="ctrl-btn" id="btn-prev" title="Langkah Sebelumnya" onclick="stepBack()">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="19 20 9 12 19 4 19 20" />
+                <line x1="5" y1="19" x2="5" y2="5" />
+              </svg>
+            </button>
+
+            <button class="ctrl-btn btn-play-primary" id="btn-play" title="Putar / Jeda Otomatis"
+              onclick="togglePlay()">
+              <svg id="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <polygon points="6 4 20 12 6 20 6 4" />
+              </svg>
+            </button>
+
+            <button class="ctrl-btn" id="btn-next" title="Langkah Berikutnya" onclick="stepForward()">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 4 15 12 5 20 5 4" />
+                <line x1="19" y1="5" x2="19" y2="19" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="speed-control">
+            <span>Kecepatan:</span>
+            <select class="speed-select" id="speed-select" onchange="changeSpeed(this.value)">
+              <option value="1400">Lambat (1.4s)</option>
+              <option value="800" selected>Normal (0.8s)</option>
+              <option value="400">Cepat (0.4s)</option>
+              <option value="180">Kilat (0.18s)</option>
+            </select>
+          </div>
+
+          <div class="step-indicator" id="step-label">Langkah 1 / 1</div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-bar" role="list" aria-label="Keterangan warna node">
+          <div class="legend-item" role="listitem">
+            <span class="legend-dot" style="background:#2d3e5c;color:#2d3e5c;"></span>
+            Belum Dikunjungi
+          </div>
+          <div class="legend-item" role="listitem">
+            <span class="legend-dot" style="background:var(--color-frontier);color:var(--color-frontier);"></span>
+            Antrian / Tumpukan
+          </div>
+          <div class="legend-item" role="listitem">
+            <span class="legend-dot" style="background:var(--color-current);color:var(--color-current);"></span>
+            Sedang Diproses
+          </div>
+          <div class="legend-item" role="listitem">
+            <span class="legend-dot" style="background:var(--color-visited);color:var(--color-visited);"></span>
+            Sudah Dikunjungi
+          </div>
+          <div class="legend-item" role="listitem">
+            <span class="legend-dot" style="background:var(--color-final);color:var(--color-final);"></span>
+            Jalur Akhir Ditemukan
+          </div>
+        </div>
+      </div><!-- /map-card -->
+
+      <!-- ---- Right: Sidebar ---- -->
+      <div class="sidebar">
+
+        <!-- Status Narration -->
+        <div class="card card-status">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            Status Penjelajahan
+          </div>
+          <div class="narrative-box">
+            <div class="narrative-headline" id="caption">Memuat simulasi...</div>
+            <div class="narrative-desc" id="subcaption">Menyiapkan graf dungeon RPG.</div>
+            <div id="result-badge-container"></div>
+          </div>
+        </div>
+
+        <!-- Frontier / Queue / Stack -->
+        <div class="card card-frontier">
+          <div class="card-title" id="frontier-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M9 3v18" />
+              <path d="M3 9h18" />
+            </svg>
+            Daftar Antrian (Queue)
+          </div>
+          <div class="frontier-list" id="frontier-items"></div>
+        </div>
+
+        <!-- Algorithm Properties -->
+        <div class="card card-info">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            Karakteristik Algoritma
+          </div>
+          <table class="algo-summary-table" id="algo-info-table">
+            <tr>
+              <td>Strategi</td>
+              <td id="info-strategy">FIFO (First-In First-Out)</td>
+            </tr>
+            <tr>
+              <td>Jaminan Optimal</td>
+              <td id="info-optimal">Optimal pada jumlah langkah</td>
+            </tr>
+            <tr>
+              <td>Struktur Data</td>
+              <td id="info-ds">Queue (Antrian)</td>
+            </tr>
+            <tr>
+              <td>Total Jarak Tempuh</td>
+              <td id="info-distance">-</td>
+            </tr>
+          </table>
+        </div>
+
+      </div><!-- /sidebar -->
+    </main>
+
+  </div><!-- /container -->
+
+  <script src="script.js"></script>
+</body>
+
+</html>
